@@ -16,7 +16,7 @@
 
 Usage:
     ion_test_driver.py [--implementation <description>]... [--ion-tests <description>] [--test <type>]...
-                       [--local-only] [--cmake <path>] [--git <path>] [--output-dir <dir>] [--results-file <file>]
+                       [--local-only] [--cmake <path>] [--git <path>] [--maven <path>] [--output-dir <dir>] [--results-file <file>]
                        [<test_file>]...
     ion_test_driver.py (--list)
     ion_test_driver.py (-h | --help)
@@ -25,6 +25,8 @@ Options:
     --cmake <path>                      Path to the cmake executable.
 
     --git <path>                        Path to the git executable.
+
+    --maven <path>                      Path to the maven executable.
 
     -h, --help                          Show this screen.
 
@@ -181,7 +183,11 @@ class IonImplementation(IonResource):
             self._executable = os.path.abspath(os.path.join(self._build_dir, self._build.execute))
         if not os.path.isfile(self._executable):
             raise ValueError('Executable for %s does not exist.' % self._name)
-        _, stderr = Popen((self._executable,) + args, stderr=PIPE, shell=COMMAND_SHELL).communicate()
+        if str.split(self.identifier, '_')[0] == 'ion-java':
+            _, stderr = Popen((("java", "-jar", self._executable,) + args),
+                              stderr=PIPE, shell=COMMAND_SHELL).communicate()
+        else:
+            _, stderr = Popen((self._executable,) + args, stderr=PIPE, shell=COMMAND_SHELL).communicate()
         return stderr
 
 
@@ -766,6 +772,7 @@ def ion_test_driver(arguments):
             test_types = [test_type_from_str(x) for x in test_type_strs]
         test_file_filter = arguments['<test_file>']
         test_all(implementations, ion_tests_dir, test_types, test_file_filter, results_root, results_file)
+
 
 if __name__ == '__main__':
     ion_test_driver(docopt(__doc__))
