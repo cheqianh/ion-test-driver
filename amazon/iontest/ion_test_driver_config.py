@@ -45,8 +45,8 @@ def install_ion_java(log):
 ION_BUILDS = {
     'ion-c': IonBuild(install_ion_c, os.path.join('tools', 'cli', 'ion'), ()),
     'ion-tests': NO_OP_BUILD,
-    'ion-java': IonBuild(
-        install_ion_java, os.path.join('ion-java-cli', 'target', 'ion-java-cli-1.0.jar'), ("java", "-jar"))
+    'ion-java': IonBuild(install_ion_java, os.path.join('ion-java-cli', 'target', 'ion-java-cli-1.0.jar'),
+                         (TOOL_DEPENDENCIES['java'], "-jar"))
     # TODO add more implementations here
 }
 
