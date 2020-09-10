@@ -113,6 +113,7 @@ class IonResource:
         except KeyError:
             raise ValueError('No installer for %s.' % name)
         self._name = name
+        self._prefix = self._build.prefix
         self._build_dir = None
         self.__build_log = None
         self.__identifier = None
@@ -183,11 +184,9 @@ class IonImplementation(IonResource):
             self._executable = os.path.abspath(os.path.join(self._build_dir, self._build.execute))
         if not os.path.isfile(self._executable):
             raise ValueError('Executable for %s does not exist.' % self._name)
-        if str.split(self.identifier, '_')[0] == 'ion-java':
-            _, stderr = Popen((("java", "-jar", self._executable,) + args),
-                              stderr=PIPE, shell=COMMAND_SHELL).communicate()
-        else:
-            _, stderr = Popen((self._executable,) + args, stderr=PIPE, shell=COMMAND_SHELL).communicate()
+        if self._prefix is None:
+            raise ValueError('Prefix for %s does not exist.' % self._name)
+        _, stderr = Popen((self._prefix + (self._executable,) + args), stderr=PIPE, shell=COMMAND_SHELL).communicate()
         return stderr
 
 
@@ -486,7 +485,7 @@ class TestFile:
                     write_errors = self.__new_results_file(read_result.impl_id + ION_SUFFIX_TEXT, write_output_root,
                                                            encoding, TestFile.ERRORS_DIR)
                     self.__execute_with(ion_implementation, write_errors,
-                                        ('process', '--error-report', write_errors,'--output', write_output,
+                                        ('process', '--error-report', write_errors, '--output', write_output,
                                          '--output-format', encoding, read_result.output_location))
                     self.__write_results.append(TestResult(ion_implementation.identifier, write_output, write_errors))
 
