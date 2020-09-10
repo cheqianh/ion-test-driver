@@ -28,7 +28,8 @@ ION_TESTS_SOURCE = 'https://github.com/amzn/ion-tests.git'
 TOOL_DEPENDENCIES = {
     'cmake': 'cmake',
     'git': 'git',
-    'maven': 'mvn'
+    'maven': 'mvn',
+    'java': 'java'
 }
 
 
@@ -53,6 +54,6 @@ ION_BUILDS = {
 # and should not be added here. For the proper description format, see the ion_test_driver CLI help.
 ION_IMPLEMENTATIONS = [
     'ion-c,https://github.com/amzn/ion-c.git,master',
-    'ion-java,git@github.com:cheqianh/ion-java.git,pr6'
+    'ion-java,git@github.com:cheqianh/ion-java.git,master'
     # TODO add more Ion implementations here
 ]

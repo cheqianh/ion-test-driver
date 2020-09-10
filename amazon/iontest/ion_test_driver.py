@@ -28,6 +28,8 @@ Options:
 
     --maven <path>                      Path to the maven executable.
 
+    --java <path>                       Path to the java executable.
+
     -h, --help                          Show this screen.
 
     -i, --implementation <description>  Test an additional implementation specified by a description of the form
@@ -184,8 +186,6 @@ class IonImplementation(IonResource):
             self._executable = os.path.abspath(os.path.join(self._build_dir, self._build.execute))
         if not os.path.isfile(self._executable):
             raise ValueError('Executable for %s does not exist.' % self._name)
-        if self._prefix is None:
-            raise ValueError('Prefix for %s does not exist.' % self._name)
         _, stderr = Popen((self._prefix + (self._executable,) + args), stderr=PIPE, shell=COMMAND_SHELL).communicate()
         return stderr
 
