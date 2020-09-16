@@ -92,7 +92,8 @@ def check_tool_dependencies(args):
             # to call a tool-specific command to test the existence of the executable. This should be a command that
             # always returns zero.
             no_output = open(os.devnull, 'w')
-            check_call([path, '--help'], stdout=no_output, shell=COMMAND_SHELL)
+            if name is not 'java':
+                check_call([path, '--help'], stdout=no_output, shell=COMMAND_SHELL)
         except:
             raise ValueError(name + " not found. Try specifying its location using --" + name + ".")
         finally:
