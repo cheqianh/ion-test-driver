@@ -775,4 +775,5 @@ def ion_test_driver(arguments):
 
 
 if __name__ == '__main__':
+    print('start')
     ion_test_driver(docopt(__doc__))
