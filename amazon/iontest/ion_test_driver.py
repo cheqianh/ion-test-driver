@@ -17,7 +17,7 @@
 Usage:
     ion_test_driver.py [--implementation <description>]... [--ion-tests <description>] [--test <type>]...
                        [--local-only] [--cmake <path>] [--git <path>] [--maven <path>] [--java <path>]
-                       [--output-dir <dir>] [--results-file <file>] [<test_file>]...
+                       [--output-dir <dir>] [--results-file <file>] [--replace-impl <description>] [<test_file>]...
     ion_test_driver.py (--list)
     ion_test_driver.py (-h | --help)
 
@@ -50,6 +50,10 @@ Options:
     -r, --results-file <file>           Path to the results output file. By default, this will be placed in a file named
                                         `ion-test-driver-results.ion` under the directory specified by the
                                         `--output-dir` option.
+
+    -R, --replace-impl <description>    Override one specific default ion-tests location by providing a description of
+                                        the form location,revision. Note that the implementation with the same name will
+                                        be replaced.
 
     -t, --test <type>                   Perform a particular test type or types, chosen from `good`, `bad`, `equivs`,
                                         `non-equivs`, and `all`. [default: all]
@@ -92,7 +96,8 @@ def check_tool_dependencies(args):
             # to call a tool-specific command to test the existence of the executable. This should be a command that
             # always returns zero.
             no_output = open(os.devnull, 'w')
-            check_call([path, '--help'], stdout=no_output, shell=COMMAND_SHELL)
+            if name != 'java':
+                check_call([path, '--help'], stdout=no_output, shell=COMMAND_SHELL)
         except:
             raise ValueError(name + " not found. Try specifying its location using --" + name + ".")
         finally:
@@ -746,6 +751,10 @@ def ion_test_driver(arguments):
                 print(impl_name)
     else:
         output_root = os.path.abspath(arguments['--output-dir'])
+        if arguments['--replace-impl']:
+            for index in range(len(ION_IMPLEMENTATIONS)):
+                if arguments['--replace-impl'].split(',')[0] == ION_IMPLEMENTATIONS[index].split(',')[0]:
+                    ION_IMPLEMENTATIONS[index] = arguments['--replace-impl']
         if not os.path.exists(output_root):
             os.makedirs(output_root)
         implementations = parse_implementations(arguments['--implementation'], output_root)
