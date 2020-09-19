@@ -15,20 +15,24 @@
 """Cross-implementation test driver.
 
 Usage:
+    ion_test_driver.py [--compare-res <path> <path>]
     ion_test_driver.py [--implementation <description>]... [--ion-tests <description>] [--test <type>]...
-                       [--local-only] [--cmake <path>] [--git <path>] [--maven <path>] [--java <path>]
+                       [--local-only] [--cmake <path>] [--git <path>] [--java <path>] [--maven <path>]
                        [--output-dir <dir>] [--results-file <file>] [--replace-impl <description>] [<test_file>]...
     ion_test_driver.py (--list)
     ion_test_driver.py (-h | --help)
 
 Options:
+    -c --compare-res <path>             A specific mode comparing two result files. It skips revision, message and
+                                        location during the comparing.
+
     --cmake <path>                      Path to the cmake executable.
 
     --git <path>                        Path to the git executable.
 
-    --maven <path>                      Path to the maven executable.
-
     --java <path>                       Path to the java executable.
+
+    --maven <path>                      Path to the maven executable.
 
     -h, --help                          Show this screen.
 
@@ -134,7 +138,7 @@ class IonResource:
             raise ValueError('Implementation %s must be installed before receiving an identifier.' % self._name)
         return self.__identifier
 
-    def __git_clone_revision(self):
+    def __git_clone_revision(self, show_revision):
         # The commit is not yet known; clone into a temporary location to determine the commit and decide whether the
         # code for that revision is already present. If it is, use the existing code, as it may have already been built.
         tmp_dir_root = os.path.abspath((os.path.join(self.__output_root, 'build', 'tmp')))
@@ -150,7 +154,9 @@ class IonResource:
                 log_call(tmp_log, (TOOL_DEPENDENCIES['git'], 'checkout', self.__revision))
                 log_call(tmp_log, (TOOL_DEPENDENCIES['git'], 'submodule', 'update', '--init'))
             commit = check_output((TOOL_DEPENDENCIES['git'], 'rev-parse', '--short', 'HEAD')).strip()
-            self.__identifier = self._name + '_' + commit.decode()
+            self.__identifier = self._name
+            if not show_revision:
+                self.__identifier += '_' + commit.decode()
             self._build_dir = os.path.abspath(os.path.join(self.__output_root, 'build', self.__identifier))
             logs_dir = os.path.abspath(os.path.join(self.__output_root, 'build', 'logs'))
             if not os.path.isdir(logs_dir):
@@ -164,14 +170,18 @@ class IonResource:
         finally:
             shutil.rmtree(tmp_dir_root)
 
-    def install(self):
+    def install(self, show_revision):
         print('Installing %s revision %s.' % (self._name, self.__revision))
-        self.__git_clone_revision()
+        self.__git_clone_revision(show_revision=show_revision)
         os.chdir(self._build_dir)
         self._build.install(self.__build_log)
         os.chdir(self.__output_root)
         print('Done installing %s.' % self.identifier)
         return self._build_dir
+
+    @property
+    def name(self):
+        return self._name
 
 
 class IonImplementation(IonResource):
@@ -749,9 +759,14 @@ def ion_test_driver(arguments):
         for impl_name in ION_BUILDS.keys():
             if impl_name != 'ion-tests':
                 print(impl_name)
+    elif arguments['--compare-res']:
+        # didn't implement yet
+        print(arguments['--compare-res'])
     else:
         output_root = os.path.abspath(arguments['--output-dir'])
+        replace_impl = ""
         if arguments['--replace-impl']:
+            replace_impl = arguments['--replace-impl'].split(',')[0]
             for index in range(len(ION_IMPLEMENTATIONS)):
                 if arguments['--replace-impl'].split(',')[0] == ION_IMPLEMENTATIONS[index].split(',')[0]:
                     ION_IMPLEMENTATIONS[index] = arguments['--replace-impl']
@@ -762,13 +777,13 @@ def ion_test_driver(arguments):
             implementations += parse_implementations(ION_IMPLEMENTATIONS, output_root)
         check_tool_dependencies(arguments)
         for implementation in implementations:
-            implementation.install()
+            implementation.install(show_revision=(implementation.name == replace_impl))
         ion_tests_source = arguments['--ion-tests']
         if not ion_tests_source:
             ion_tests_source = ION_TESTS_SOURCE
         ion_tests_dir = IonResource(
             output_root, 'ion-tests', *tokenize_description(ion_tests_source, has_name=False)
-        ).install()
+        ).install(show_revision=False)
         results_root = os.path.join(output_root, 'results')
         results_file = arguments['--results-file']
         if not results_file:
