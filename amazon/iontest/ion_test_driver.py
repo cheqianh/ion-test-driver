@@ -15,7 +15,7 @@
 """Cross-implementation test driver.
 
 Usage:
-    ion_test_driver.py [--compare-res <path> <path>]
+    ion_test_driver.py (--compare-res <path>)...
     ion_test_driver.py [--implementation <description>]... [--ion-tests <description>] [--test <type>]...
                        [--local-only] [--cmake <path>] [--git <path>] [--java <path>] [--maven <path>]
                        [--output-dir <dir>] [--results-file <file>] [--replace-impl <description>] [<test_file>]...
@@ -23,8 +23,8 @@ Usage:
     ion_test_driver.py (-h | --help)
 
 Options:
-    -c --compare-res <path>             A specific mode comparing two result files. It skips revision, message and
-                                        location during the comparing.
+    -c, --compare-res <path> <path>     A specific mode comparing two result files by given paths. Raise an Error if
+                                        two files are different.
 
     --cmake <path>                      Path to the cmake executable.
 
@@ -56,8 +56,9 @@ Options:
                                         `--output-dir` option.
 
     -R, --replace-impl <description>    Override one specific default ion-tests location by providing a description of
-                                        the form location,revision. Note that the implementation with the same name will
-                                        be replaced.
+                                        the form location,revision. Note that the implementation showed in --list with
+                                        the same name will be replaced. It will show 'ion-java' as the name in the
+                                        result file rather than ion-java_revision_number.
 
     -t, --test <type>                   Perform a particular test type or types, chosen from `good`, `bad`, `equivs`,
                                         `non-equivs`, and `all`. [default: all]
@@ -752,6 +753,12 @@ def parse_implementations(descriptions, output_root):
             for description in descriptions]
 
 
+def compare_files(files):
+    if len(files) != 2:
+        raise ValueError("Invalid file numbers. Need exactly two files to compare")
+    check_call(('diff', '-B', files[0], files[1]), shell=COMMAND_SHELL)
+
+
 def ion_test_driver(arguments):
     if arguments['--help']:
         print(__doc__)
@@ -760,8 +767,7 @@ def ion_test_driver(arguments):
             if impl_name != 'ion-tests':
                 print(impl_name)
     elif arguments['--compare-res']:
-        # didn't implement yet
-        print(arguments['--compare-res'])
+        compare_files(arguments['--compare-res'])
     else:
         output_root = os.path.abspath(arguments['--output-dir'])
         replace_impl = ""
