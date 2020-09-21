@@ -51,10 +51,10 @@ Options:
                                         `ion-test-driver-results.ion` under the directory specified by the
                                         `--output-dir` option.
 
-    -R, --replace-impl <description>    Override one specific default ion-tests location by providing a description of
+    -R, --replace-impl <description>    Override one specific default implementation by providing a description of
                                         the form location,revision. Note that the implementation showed in --list with
-                                        the same name will be replaced. It will show 'ion-java' as the name in the
-                                        result file rather than ion-java_revision_number.
+                                        the same name will be replaced. It will show 'implementation-name' as the name
+                                        in the result file rather than implementation-name_revision_number.
 
     -t, --test <type>                   Perform a particular test type or types, chosen from `good`, `bad`, `equivs`,
                                         `non-equivs`, and `all`. [default: all]
