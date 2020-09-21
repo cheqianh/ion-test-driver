@@ -15,7 +15,6 @@
 """Cross-implementation test driver.
 
 Usage:
-    ion_test_driver.py (--compare-res <path>)...
     ion_test_driver.py [--implementation <description>]... [--ion-tests <description>] [--test <type>]...
                        [--local-only] [--cmake <path>] [--git <path>] [--java <path>] [--maven <path>]
                        [--output-dir <dir>] [--results-file <file>] [--replace-impl <description>] [<test_file>]...
@@ -23,9 +22,6 @@ Usage:
     ion_test_driver.py (-h | --help)
 
 Options:
-    -c, --compare-res <path> <path>     A specific mode comparing two result files by given paths. Raise an Error if
-                                        two files are different.
-
     --cmake <path>                      Path to the cmake executable.
 
     --git <path>                        Path to the git executable.
@@ -752,12 +748,6 @@ def parse_implementations(descriptions, output_root):
             for description in descriptions]
 
 
-def compare_files(files):
-    if len(files) != 2:
-        raise ValueError("Invalid file numbers. Need exactly two files to compare")
-    check_call(('diff', '-B', files[0], files[1]), shell=COMMAND_SHELL)
-
-
 def ion_test_driver(arguments):
     if arguments['--help']:
         print(__doc__)
@@ -765,8 +755,6 @@ def ion_test_driver(arguments):
         for impl_name in ION_BUILDS.keys():
             if impl_name != 'ion-tests':
                 print(impl_name)
-    elif arguments['--compare-res']:
-        compare_files(arguments['--compare-res'])
     else:
         output_root = os.path.abspath(arguments['--output-dir'])
         replace_impl = ""
