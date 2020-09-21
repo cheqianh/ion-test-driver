@@ -151,7 +151,7 @@ class IonResource:
                 log_call(tmp_log, (TOOL_DEPENDENCIES['git'], 'submodule', 'update', '--init'))
             commit = check_output((TOOL_DEPENDENCIES['git'], 'rev-parse', '--short', 'HEAD')).strip()
             self.__identifier = self._name
-            if not show_revision:
+            if show_revision:
                 self.__identifier += '_' + commit.decode()
             self._build_dir = os.path.abspath(os.path.join(self.__output_root, 'build', self.__identifier))
             logs_dir = os.path.abspath(os.path.join(self.__output_root, 'build', 'logs'))
@@ -770,7 +770,7 @@ def ion_test_driver(arguments):
             implementations += parse_implementations(ION_IMPLEMENTATIONS, output_root)
         check_tool_dependencies(arguments)
         for implementation in implementations:
-            implementation.install(show_revision=(implementation.name == replace_impl))
+            implementation.install(show_revision=(implementation.name != replace_impl))
         ion_tests_source = arguments['--ion-tests']
         if not ion_tests_source:
             ion_tests_source = ION_TESTS_SOURCE
