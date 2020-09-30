@@ -18,6 +18,7 @@ Usage:
     ion_test_driver.py [--implementation <description>]... [--ion-tests <description>] [--test <type>]...
                        [--local-only] [--cmake <path>] [--git <path>] [--maven <path>] [--java <path>] [--npm <path>]
                        [--node <path>] [--output-dir <dir>] [--results-file <file>] [<test_file>]...
+    ion_test_driver.py [--results-diff <description>]... [<result_file>]
     ion_test_driver.py (--list)
     ion_test_driver.py (-h | --help)
 
@@ -55,6 +56,9 @@ Options:
                                         `ion-test-driver-results.ion` under the directory specified by the
                                         `--output-dir` option.
 
+    -R, --results-diff <description>    Given two descriptions. analysis the result files and shows
+                                        the difference between these two implementations.
+
     -t, --test <type>                   Perform a particular test type or types, chosen from `good`, `bad`, `equivs`,
                                         `non-equivs`, and `all`. [default: all]
 
@@ -66,7 +70,10 @@ from io import FileIO
 from subprocess import check_call, check_output, Popen, PIPE
 import six
 from amazon.ion import simpleion
-from amazon.ion.core import IonType
+from amazon.ion.core import IonType, IonEventType
+from amazon.ion.reader import NEXT_EVENT, read_data_event, SKIP_EVENT
+from amazon.ion.reader_managed import managed_reader
+from amazon.ion.reader_text import text_reader
 from amazon.ion.simple_types import IonPySymbol, IonPyList
 from amazon.ion.util import Enum
 from docopt import docopt
@@ -741,6 +748,85 @@ def parse_implementations(descriptions, output_root):
             for description in descriptions]
 
 
+# TODO 0. create a new struct for error report such as error_report, read_error, write_compare etc.
+
+
+def next_event(event, reader):
+    if event.ion_type.is_container:
+        return reader.send(SKIP_EVENT)
+    else:
+        return reader.send(NEXT_EVENT)
+
+
+def analyze_results(implementations, results_file):
+    with open(results_file, 'r') as f:
+        result_context = f.read()
+
+    # TODO 1. decide how to represent implementations' description, currently is string (e.g "ion-java_abcd123")
+    final_result = None
+    first_impl = implementations[0]
+    first_report = None
+    second_impl = implementations[1]
+    second_report = None
+
+    reader = managed_reader(text_reader())
+    reader.send(NEXT_EVENT)
+    event = reader.send(read_data_event(str.encode(result_context, 'utf-8')))
+
+    # Top-level of the result report
+    while event.event_type != IonEventType.CONTAINER_END:
+        event = reader.send(NEXT_EVENT)
+        # For each test type
+        while event.event_type != IonEventType.CONTAINER_END:
+            test_type = event.field_name.text if event.field_name is not None else None
+            event = reader.send(NEXT_EVENT)
+            # For each test file
+            while event.event_type != IonEventType.CONTAINER_END:
+                test_file = event.field_name.text if event.field_name is not None else None
+                event = reader.send(NEXT_EVENT)
+                # For each implementation
+                while event.event_type != IonEventType.CONTAINER_END:
+                    test_implementation = event.field_name.text if event.field_name is not None else None
+                    if test_implementation != first_impl and test_implementation != second_impl:
+                        reader.send(SKIP_EVENT)
+                    else:
+                        # TODO 4.decide how to represent a result file. Currently just simply use it as a string.
+                        cur_result = ""
+                        # parse each phase result
+                        event = reader.send(NEXT_EVENT)
+                        while event.event_type != IonEventType.CONTAINER_END:
+                            result_type = event.field_name.text if event.field_name is not None else None
+                            if result_type is None:
+                                raise ValueError("Field_name cannot be None")
+                            elif result_type == 'result':
+                                # TODO 2. convert content to result
+                                event = next_event(event, reader)
+                            elif result_type == 'read_error':
+                                # TODO 2. convert content to read_error structure
+                                event = next_event(event, reader)
+                            elif result_type == 'read_compare':
+                                # TODO 2. convert content to read_compare structure
+                                event = next_event(event, reader)
+                            elif result_type == 'write_error':
+                                # TODO 2. convert content to write_error structure
+                                event = next_event(event, reader)
+                            elif result_type == 'write_compare':
+                                # TODO 2. convert content to write_compare structure
+                                event = next_event(event, reader)
+                            else:
+                                raise ValueError("Invalid result type '%s' in '%s' file: %s for implementation: %s" %
+                                                 (result_type, test_type, test_file, test_implementation))
+                        if test_implementation == first_impl:
+                            first_report = cur_result
+                        else:
+                            second_report = cur_result
+                    event = reader.send(NEXT_EVENT)
+                # TODO 3. analysis two result structs
+                # TODO 4. write it to main result file
+                event = reader.send(NEXT_EVENT)
+            event = reader.send(NEXT_EVENT)
+
+
 def ion_test_driver(arguments):
     if arguments['--help']:
         print(__doc__)
@@ -748,6 +834,10 @@ def ion_test_driver(arguments):
         for impl_name in ION_BUILDS.keys():
             if impl_name != 'ion-tests':
                 print(impl_name)
+    elif arguments['--results-diff']:
+        implementations = arguments['--results-diff']
+        results_file = arguments['<result_file>']
+        analyze_results(implementations, results_file)
     else:
         output_root = os.path.abspath(arguments['--output-dir'])
         if not os.path.exists(output_root):
