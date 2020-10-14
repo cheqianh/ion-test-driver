@@ -1055,7 +1055,8 @@ def analyze_results(first_implementation, second_implementation, results_file, o
                                                                        second_disagree_list_for_write)
                 write_compare_report = {
                     TestFile.ERROR_MESSAGE_FIELD: "Write_compare: write behavior changed. "
-                                                  "Description below following the format: 'type,file' where "
+                                                  "Description below following the format: 'impl,type,file' where impl "
+                                                  "is the implementation used for writing files,"
                                                   "type is either 'text' or 'binary' and "
                                                   "file is the file that be re-writen",
                     "disagree_lists": {first_impl: first_disagree_list_for_write,
