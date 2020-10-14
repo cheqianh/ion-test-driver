@@ -747,10 +747,13 @@ def parse_implementations(descriptions, output_root):
             for description in descriptions]
 
 
-def write_errors(report, first_impl, first_report, second_impl, second_report, field, msg):
+def write_errors(report, first_field, first_report, second_field, second_report, field, msg):
     report[TestFile.ERROR_MESSAGE_FIELD] = msg
-    errors = {first_impl: first_report,
-              second_impl: second_report}
+    errors = {}
+    if first_field is not None:
+        errors[first_field] = first_report
+    if second_field is not None:
+        errors[second_field] = second_report
     report[field] = errors
 
 
@@ -875,14 +878,19 @@ def are_lists_agree(first_lists, second_lists):
     return True
 
 
-def write_errors_to_report(report, first_impl, first_report, second_impl, second_report, error_field, msg, cur_result,
+def write_errors_to_report(report, first_field, first_report, second_field, second_report, error_field, msg, cur_result,
                            final_result, test_file, report_field):
-    write_errors(report, first_impl, first_report, second_impl,
+    write_errors(report, first_field, first_report, second_field,
                  second_report, error_field, msg)
     write_to_report(cur_result, final_result, report, test_file, report_field)
 
 
 def analyze_results(first_implementation, second_implementation, results_file, output_root):
+    result_field = 'result'
+    disagree_lists = 'disagree_lists'
+    no_longer_agrees_with = 'no_longer_agrees_with'
+    now_agrees_with = 'now_agrees_with'
+
     first_desc = first_implementation.split(',')
     first_impl = first_desc[0] + '_' + first_desc[1]
     second_desc = second_implementation.split(',')
@@ -913,18 +921,18 @@ def analyze_results(first_implementation, second_implementation, results_file, o
 
             # Step one analyze result field
             result_report = {}
-            if 'result' not in first_report.keys():
+            if result_field not in first_report.keys():
                 raise ValueError("Invalid result: missing result for '" + first_impl + "' in '" + test_file + "'.")
-            if 'result' not in second_report.keys():
+            if result_field not in second_report.keys():
                 raise ValueError("Invalid result: missing result for '" + second_impl + "' in '" + test_file + "'.")
-            if not ion_equals(first_report['result'], second_report['result']):
+            if not ion_equals(first_report[result_field], second_report[result_field]):
                 result_report = {TestFile.ERROR_MESSAGE_FIELD: "Result: two revisions have different results."
                                                                " This might be a cli tool issue."}
-            elif ion_equals(first_report['result'], TestReport.PASS) and \
-                    ion_equals(second_report['result'], TestReport.PASS):
+            elif ion_equals(first_report[result_field], TestReport.PASS) and \
+                    ion_equals(second_report[result_field], TestReport.PASS):
                 continue
             if any(result_report):
-                write_to_report(cur_result, final_result, result_report, test_file, "result")
+                write_to_report(cur_result, final_result, result_report, test_file, result_field)
                 continue
 
             # Step two analyze read_error field
@@ -934,11 +942,16 @@ def analyze_results(first_implementation, second_implementation, results_file, o
             second_read_error = second_report[TestReport.READ_ERROR] \
                 if TestReport.READ_ERROR in second_report.keys() else []
             if first_read_error != second_read_error:
-                message = "Read_error: two revisions have different errors."
-                write_errors_to_report(read_report, first_impl, first_read_error, second_impl, second_read_error,
-                                       TestReport.READ_ERROR, message, cur_result, final_result, test_file,
-                                       TestReport.READ_ERROR)
-                continue
+                new_errors = []
+                for err in second_read_error:
+                    if err not in first_read_error:
+                        new_errors.append(err)
+                if any(new_errors):
+                    message = "Read_error: new commit causes new read error(s)."
+                    write_errors_to_report(read_report, None, None, "new_errors", new_errors,
+                                           TestReport.READ_ERROR, message, cur_result, final_result, test_file,
+                                           TestReport.READ_ERROR)
+                    continue
 
             # Step three analyze read_compare field
             read_compare_report = {}
@@ -980,7 +993,7 @@ def analyze_results(first_implementation, second_implementation, results_file, o
                               "but have different disagree lists. " \
                               "This might be a cli tool issue."
                     write_errors_to_report(read_compare_report, first_impl, first_disagree_list, second_impl,
-                                           second_disagree_list, "disagree_lists", message,
+                                           second_disagree_list, disagree_lists, message,
                                            cur_result, final_result, test_file, TestReport.READ_COMPARE)
                     continue
             elif second_impl in first_disagree_list and first_impl in second_disagree_list:
@@ -989,9 +1002,9 @@ def analyze_results(first_implementation, second_implementation, results_file, o
                 read_compare_report = {
                     TestFile.ERROR_MESSAGE_FIELD: "Read_compare: read behavior changed against other "
                                                   "implementations.",
-                    "disagree_lists": {first_impl: first_disagree_list, second_impl: second_disagree_list},
-                    "no_more_agree_with": no_more_agree_list,
-                    "start_agree_with": start_agree_list
+                    disagree_lists: {first_impl: first_disagree_list, second_impl: second_disagree_list},
+                    no_longer_agrees_with: no_more_agree_list,
+                    now_agrees_with: start_agree_list
                 }
                 write_to_report(cur_result, final_result, read_compare_report, test_file, TestReport.READ_COMPARE)
                 continue
@@ -1000,7 +1013,7 @@ def analyze_results(first_implementation, second_implementation, results_file, o
                           "agree with each other or both disagree with each other. " \
                           "This might be a cli tool issue."
                 write_errors_to_report(read_compare_report, first_impl, first_disagree_list, second_impl,
-                                       second_disagree_list, "disagree_lists", message,
+                                       second_disagree_list, disagree_lists, message,
                                        cur_result, final_result, test_file, TestReport.READ_COMPARE)
                 continue
 
@@ -1011,11 +1024,16 @@ def analyze_results(first_implementation, second_implementation, results_file, o
             second_write_error = second_report[TestReport.WRITE_ERROR] \
                 if TestReport.WRITE_ERROR in second_report.keys() else []
             if first_write_error != second_write_error:
-                message = "Write_error: two revisions have different errors."
-                write_errors_to_report(write_report, first_impl, first_write_error, second_impl,
-                                       second_write_error, TestReport.WRITE_ERROR, message,
-                                       cur_result, final_result, test_file, TestReport.WRITE_ERROR)
-                continue
+                new_errors = []
+                for err in second_write_error:
+                    if err not in first_write_error:
+                        new_errors.append(err)
+                if any(new_errors):
+                    message = "Write_error: new commit causes new write error(s)."
+                    write_errors_to_report(write_report, None, None, "new_errors", new_errors,
+                                           TestReport.WRITE_ERROR, message, cur_result, final_result, test_file,
+                                           TestReport.WRITE_ERROR)
+                    continue
 
             # Step five analyze write_compare field
             write_compare_report = {}
@@ -1059,10 +1077,10 @@ def analyze_results(first_implementation, second_implementation, results_file, o
                                                   "is the implementation used for writing files,"
                                                   "type is either 'text' or 'binary' and "
                                                   "file is the file that be re-writen",
-                    "disagree_lists": {first_impl: first_disagree_list_for_write,
-                                       second_impl: second_disagree_list_for_write},
-                    "no_more_agree_with": no_more_agree_lists,
-                    "start_agree_with": start_agree_lists,
+                    disagree_lists: {first_impl: first_disagree_list_for_write,
+                                     second_impl: second_disagree_list_for_write},
+                    no_longer_agrees_with: no_more_agree_lists,
+                    now_agrees_with: start_agree_lists,
                 }
                 write_to_report(cur_result, final_result, write_compare_report, test_file, TestReport.WRITE_COMPARE)
                 continue
