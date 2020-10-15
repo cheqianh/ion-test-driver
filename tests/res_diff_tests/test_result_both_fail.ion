@@ -1,0 +1,29 @@
+{
+ bad: 	{
+	"test": {
+			'ion-java_1': {
+				result: FAIL,
+				read_error: ErrorReport::[{
+                        message: "test.",
+                }]
+			},
+			'ion-java_2': {
+				result:FAIL,
+				read_error: ErrorReport::[{
+                        message: "test2.",
+                }]
+			}
+	},
+	"test2": {
+			'ion-java_1': {
+				result: FAIL,
+			},
+			'ion-java_2': {
+				result:PASS,
+			}
+	},
+ },
+ good: {},
+ equivs: {},
+ 'non-equivs':{}
+}

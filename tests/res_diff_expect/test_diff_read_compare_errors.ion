@@ -1,0 +1,17 @@
+$ion_1_0
+{
+ test: {
+  read_compare: {
+   message: "Read_compare: new commit causes new read compare error(s).",
+   errors: {
+    new_errors: {
+     errors: ErrorReport::[
+      {
+       message: "test2"
+      }
+     ]
+    }
+   }
+  }
+ }
+}

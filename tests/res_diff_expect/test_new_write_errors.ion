@@ -1,0 +1,17 @@
+$ion_1_0
+{
+ test: {
+  write_error: {
+   message: "Write_error: new commit causes new write error(s).",
+   write_error: {
+    new_errors: [
+     {
+      error_type: WRITE,
+      message: "test message.",
+      location: "test"
+     }
+    ]
+   }
+  }
+ }
+}

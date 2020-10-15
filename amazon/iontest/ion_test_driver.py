@@ -56,8 +56,9 @@ Options:
                                         `ion-test-driver-results.ion` under the directory specified by the
                                         `--output-dir` option.
 
-    -R, --results-diff                  Given two implementation descriptions of the form name,revision. Name is the
-                                        implementation's name and revision should be commit hash. Analyze an existing
+    -R, --results-diff                  Given two implementation descriptions of the forms name,commit_hash or
+                                        name,location,revision. Name is the implementation's name and revision is
+                                        optional, may be either a branch name or commit hash. Analyze an existing
                                         results file to identify any differences between the two implementations.
 
     -t, --test <type>                   Perform a particular test type or types, chosen from `good`, `bad`, `equivs`,
@@ -878,6 +879,28 @@ def are_lists_agree(first_lists, second_lists):
     return True
 
 
+def parse_des_for_res_diff(description):
+    des_list = description.split(',')
+    if len(des_list) == 2:
+        name = des_list[0] + '_' + des_list[1]
+    elif len(des_list) == 3:
+        dir_name, f = os.path.split(os.path.abspath(__file__))
+        temp_dir = os.path.join(dir_name, 'temp')
+        if os.path.exists(temp_dir):
+            shutil.rmtree(temp_dir)
+        _, stderr = Popen((TOOL_DEPENDENCIES['git'], 'clone', '--recursive', des_list[1], temp_dir),
+                          stderr=PIPE, shell=COMMAND_SHELL).communicate()
+        os.chdir(temp_dir)
+        _, stderr = Popen((TOOL_DEPENDENCIES['git'], 'checkout', des_list[2]),
+                          stderr=PIPE, shell=COMMAND_SHELL).communicate()
+        commit = check_output((TOOL_DEPENDENCIES['git'], 'rev-parse', '--short', 'HEAD')).strip()
+        shutil.rmtree(temp_dir)
+        name = des_list[0] + '_' + commit.decode()
+    else:
+        raise ValueError("Invalid implementation description.")
+    return name
+
+
 def write_errors_to_report(report, first_field, first_report, second_field, second_report, error_field, msg, cur_result,
                            final_result, test_file, report_field):
     write_errors(report, first_field, first_report, second_field,
@@ -891,11 +914,10 @@ def analyze_results(first_implementation, second_implementation, results_file, o
     no_longer_agrees_with = 'no_longer_agrees_with'
     now_agrees_with = 'now_agrees_with'
 
-    first_desc = first_implementation.split(',')
-    first_impl = first_desc[0] + '_' + first_desc[1]
-    second_desc = second_implementation.split(',')
-    second_impl = second_desc[0] + '_' + second_desc[1]
-    if first_desc[0] != second_desc[0]:
+    first_impl = parse_des_for_res_diff(first_implementation)
+    second_impl = parse_des_for_res_diff(second_implementation)
+
+    if first_impl.split('_')[0] != second_impl.split('_')[0]:
         raise ValueError("We only support analyzing two different revisions of the same implementation for now.")
     final_result = {}
     data = simpleion.load(FileIO(results_file))
@@ -965,12 +987,16 @@ def analyze_results(first_implementation, second_implementation, results_file, o
             second_read_compare_errors = second_read_compare[TestReport.ERRORS_FIELD] \
                 if TestReport.ERRORS_FIELD in second_read_compare.keys() else []
             if first_read_compare_errors != second_read_compare_errors:
-                message = "Read_compare: two revisions have different errors. " \
-                          "This might be a cli tool issue."
-                write_errors_to_report(read_compare_report, first_impl, first_read_compare, second_impl,
-                                       second_read_compare, TestReport.ERRORS_FIELD, message, cur_result, final_result,
-                                       test_file, TestReport.READ_COMPARE)
-                continue
+                new_errors = []
+                for err in second_read_compare_errors:
+                    if err not in first_read_compare_errors:
+                        new_errors.append(err)
+                if any(new_errors):
+                    message = "Read_compare: new commit causes new read compare error(s)."
+                    write_errors_to_report(read_compare_report, None, None, "new_errors",
+                                           second_read_compare, TestReport.ERRORS_FIELD, message, cur_result,
+                                           final_result, test_file, TestReport.READ_COMPARE)
+                    continue
             # check if 'failures' field same
             first_read_compare_failures = first_read_compare[TestReport.COMPARISON_FAILURES_FIELD] \
                 if TestReport.COMPARISON_FAILURES_FIELD in first_read_compare.keys() else []
@@ -1008,14 +1034,6 @@ def analyze_results(first_implementation, second_implementation, results_file, o
                 }
                 write_to_report(cur_result, final_result, read_compare_report, test_file, TestReport.READ_COMPARE)
                 continue
-            else:
-                message = "Read_compare: two revisions can only both " \
-                          "agree with each other or both disagree with each other. " \
-                          "This might be a cli tool issue."
-                write_errors_to_report(read_compare_report, first_impl, first_disagree_list, second_impl,
-                                       second_disagree_list, disagree_lists, message,
-                                       cur_result, final_result, test_file, TestReport.READ_COMPARE)
-                continue
 
             # Step four analyze write_error field
             write_report = {}
@@ -1047,12 +1065,16 @@ def analyze_results(first_implementation, second_implementation, results_file, o
             second_write_compare_errors = second_write_compare[TestReport.ERRORS_FIELD] \
                 if TestReport.ERRORS_FIELD in second_write_compare.keys() else []
             if first_write_compare_errors != second_write_compare_errors:
-                message = "Write_compare: two revisions have different errors. " \
-                          "This might be a cli tool issue."
-                write_errors_to_report(write_compare_report, first_impl, first_write_compare, second_impl,
-                                       second_write_compare, TestReport.ERRORS_FIELD, message,
-                                       cur_result, final_result, test_file, TestReport.WRITE_COMPARE)
-                continue
+                new_errors = []
+                for err in second_write_compare_errors:
+                    if err not in first_write_compare_errors:
+                        new_errors.append(err)
+                if any(new_errors):
+                    message = "Write_compare: new commit causes new write compare error(s)"
+                    write_errors_to_report(write_compare_report, None, None, "new_errors",
+                                           second_write_compare, TestReport.ERRORS_FIELD, message,
+                                           cur_result, final_result, test_file, TestReport.WRITE_COMPARE)
+                    continue
             # check if 'failures' field same
             first_write_compare_failures = first_write_compare[TestReport.COMPARISON_FAILURES_FIELD] \
                 if TestReport.COMPARISON_FAILURES_FIELD in first_write_compare.keys() else []
