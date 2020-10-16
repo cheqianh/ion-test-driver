@@ -236,12 +236,3 @@ def test_complex_report():
     res = compare_two_files(output_path, os.path.join(EXPECT_FILE_PATH, test_file))
     os.remove(output_path)
     assert res is True
-
-
-
-
-
-
-
-
-
