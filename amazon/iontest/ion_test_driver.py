@@ -1123,7 +1123,7 @@ def ion_test_driver(arguments):
                 print(impl_name)
     elif arguments['--results-diff']:
         output_root = os.path.abspath(arguments['--output-dir'])
-        if arguments['--output-dir'] is '.':
+        if arguments['--output-dir'] == '.':
             output_root = os.path.join(output_root, 'result.ion')
         first_implementation = arguments['<first_description>']
         second_implementation = arguments['<second_description>']
