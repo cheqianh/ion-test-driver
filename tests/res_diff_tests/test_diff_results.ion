@@ -1,12 +1,12 @@
 {
  bad: 	{
 	"test": {
-			'ion-java_1': {
-				result: PASS
-			},
-			'ion-java_2': {
-				result:FAIL
-			}
+        'ion-java_1': {
+            result: PASS
+        },
+        'ion-java_2': {
+            result:FAIL
+        }
 	},
  },
  good: {},

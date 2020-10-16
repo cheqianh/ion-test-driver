@@ -1,18 +1,18 @@
 {
  bad: 	{
 	"test": {
-			'ion-java_1': {
-				result: FAIL,
-				read_error: ErrorReport::[{
-                        message: "reason one.",
-                }]
-			},
-			'ion-java_2': {
-				result:FAIL,
-				read_error: ErrorReport::[{
-                        message: "reason two.",
-                }]
-			}
+        'ion-java_1': {
+            result: FAIL,
+            read_error: ErrorReport::[{
+                    message: "reason one.",
+            }]
+        },
+        'ion-java_2': {
+            result:FAIL,
+            read_error: ErrorReport::[{
+                    message: "reason two.",
+            }]
+        }
 	},
  },
  good: {},
