@@ -68,6 +68,7 @@ Options:
 """
 import os
 import shutil
+import sys
 from io import FileIO
 from subprocess import check_call, check_output, Popen, PIPE
 import six
@@ -778,7 +779,7 @@ def get_name_for_write(location):
         impl = impl[0:impl.rfind('.')]
     # type can be binary or text
     t = location_array[-3]
-    # file name that be re-writen
+    # file name that be re-written
     file = location_array[-1]
     if '.' in file:
         file = file[0:file.rfind('.')]
@@ -909,6 +910,8 @@ def write_errors_to_report(report, first_field, first_report, second_field, seco
 
 
 def analyze_results(first_implementation, second_implementation, results_file, output_root):
+    return_val = 0
+    return_err = 1
     result_field = 'result'
     disagree_lists = 'disagree_lists'
     no_longer_agrees_with = 'no_longer_agrees_with'
@@ -948,13 +951,13 @@ def analyze_results(first_implementation, second_implementation, results_file, o
             if result_field not in second_report.keys():
                 raise ValueError("Invalid result: missing result for '" + second_impl + "' in '" + test_file + "'.")
             if not ion_equals(first_report[result_field], second_report[result_field]):
-                result_report = {TestFile.ERROR_MESSAGE_FIELD: "Result: two revisions have different results."
-                                                               " This might be a cli tool issue."}
+                result_report = {TestFile.ERROR_MESSAGE_FIELD: "Result: two revisions have different results."}
             elif ion_equals(first_report[result_field], TestReport.PASS) and \
                     ion_equals(second_report[result_field], TestReport.PASS):
                 continue
             if any(result_report):
                 write_to_report(cur_result, final_result, result_report, test_file, result_field)
+                return_val = return_err
                 continue
 
             # Step two analyze read_error field
@@ -968,11 +971,12 @@ def analyze_results(first_implementation, second_implementation, results_file, o
                 for err in second_read_error:
                     if err not in first_read_error:
                         new_errors.append(err)
+                message = "Read_error: new commit has different read error(s)."
+                write_errors_to_report(read_report, first_impl, first_read_error, second_impl, second_read_error,
+                                       TestReport.READ_ERROR, message, cur_result, final_result, test_file,
+                                       TestReport.READ_ERROR)
                 if any(new_errors):
-                    message = "Read_error: new commit causes new read error(s)."
-                    write_errors_to_report(read_report, None, None, "new_errors", new_errors,
-                                           TestReport.READ_ERROR, message, cur_result, final_result, test_file,
-                                           TestReport.READ_ERROR)
+                    return_val = return_err
                     continue
 
             # Step three analyze read_compare field
@@ -991,11 +995,12 @@ def analyze_results(first_implementation, second_implementation, results_file, o
                 for err in second_read_compare_errors:
                     if err not in first_read_compare_errors:
                         new_errors.append(err)
+                message = "Read_compare: new commit has different read compare error(s)."
+                write_errors_to_report(read_compare_report, first_impl, first_read_compare, second_impl,
+                                       second_read_compare, TestReport.READ_COMPARE, message, cur_result,
+                                       final_result, test_file, TestReport.READ_COMPARE)
                 if any(new_errors):
-                    message = "Read_compare: new commit causes new read compare error(s)."
-                    write_errors_to_report(read_compare_report, None, None, "new_errors",
-                                           second_read_compare, TestReport.ERRORS_FIELD, message, cur_result,
-                                           final_result, test_file, TestReport.READ_COMPARE)
+                    return_val = return_err
                     continue
             # check if 'failures' field same
             first_read_compare_failures = first_read_compare[TestReport.COMPARISON_FAILURES_FIELD] \
@@ -1003,11 +1008,11 @@ def analyze_results(first_implementation, second_implementation, results_file, o
             second_read_compare_failures = second_read_compare[TestReport.COMPARISON_FAILURES_FIELD] \
                 if TestReport.COMPARISON_FAILURES_FIELD in second_read_compare.keys() else []
             if first_read_compare_failures != second_read_compare_failures:
-                message = "Read_compare: two revisions have different failures. " \
-                          "This might be a cli tool issue."
+                message = "Read_compare: two revisions have different failures."
                 write_errors_to_report(read_compare_report, first_impl, first_read_compare, second_impl,
                                        second_read_compare, TestReport.COMPARISON_FAILURES_FIELD, message, cur_result,
                                        final_result, test_file, TestReport.READ_COMPARE)
+                return_val = return_err
                 continue
             # get two disagree lists
             first_disagree_list = find_disagree_list(first_read_compare_failures, first_impl)
@@ -1016,11 +1021,11 @@ def analyze_results(first_implementation, second_implementation, results_file, o
             if second_impl not in first_disagree_list and first_impl not in second_disagree_list:
                 if first_disagree_list != second_disagree_list:
                     message = "Read_compare: two revisions agree with each other " \
-                              "but have different disagree lists. " \
-                              "This might be a cli tool issue."
+                              "but have different disagree lists. "
                     write_errors_to_report(read_compare_report, first_impl, first_disagree_list, second_impl,
                                            second_disagree_list, disagree_lists, message,
                                            cur_result, final_result, test_file, TestReport.READ_COMPARE)
+                    return_val = return_err
                     continue
             elif second_impl in first_disagree_list and first_impl in second_disagree_list:
                 no_more_agree_list, start_agree_list = analyze_list(first_disagree_list, second_disagree_list,
@@ -1033,6 +1038,7 @@ def analyze_results(first_implementation, second_implementation, results_file, o
                     now_agrees_with: start_agree_list
                 }
                 write_to_report(cur_result, final_result, read_compare_report, test_file, TestReport.READ_COMPARE)
+                return_val = return_err
                 continue
 
             # Step four analyze write_error field
@@ -1046,11 +1052,12 @@ def analyze_results(first_implementation, second_implementation, results_file, o
                 for err in second_write_error:
                     if err not in first_write_error:
                         new_errors.append(err)
+                message = "Write_error: new commit has different write error(s)."
+                write_errors_to_report(write_report, first_impl, first_write_error, second_impl,
+                                       second_write_error, TestReport.WRITE_ERROR, message, cur_result,
+                                       final_result, test_file, TestReport.WRITE_ERROR)
                 if any(new_errors):
-                    message = "Write_error: new commit causes new write error(s)."
-                    write_errors_to_report(write_report, None, None, "new_errors", new_errors,
-                                           TestReport.WRITE_ERROR, message, cur_result, final_result, test_file,
-                                           TestReport.WRITE_ERROR)
+                    return_val = return_err
                     continue
 
             # Step five analyze write_compare field
@@ -1069,11 +1076,12 @@ def analyze_results(first_implementation, second_implementation, results_file, o
                 for err in second_write_compare_errors:
                     if err not in first_write_compare_errors:
                         new_errors.append(err)
+                message = "Write_compare: new commit has different write compare error(s)"
+                write_errors_to_report(write_compare_report, first_impl, first_write_compare, second_impl,
+                                       second_write_compare, TestReport.WRITE_COMPARE, message, cur_result,
+                                       final_result, test_file, TestReport.WRITE_COMPARE)
                 if any(new_errors):
-                    message = "Write_compare: new commit causes new write compare error(s)"
-                    write_errors_to_report(write_compare_report, None, None, "new_errors",
-                                           second_write_compare, TestReport.ERRORS_FIELD, message,
-                                           cur_result, final_result, test_file, TestReport.WRITE_COMPARE)
+                    return_val = return_err
                     continue
             # check if 'failures' field same
             first_write_compare_failures = first_write_compare[TestReport.COMPARISON_FAILURES_FIELD] \
@@ -1081,11 +1089,11 @@ def analyze_results(first_implementation, second_implementation, results_file, o
             second_write_compare_failures = second_write_compare[TestReport.COMPARISON_FAILURES_FIELD] \
                 if TestReport.COMPARISON_FAILURES_FIELD in second_write_compare.keys() else []
             if first_write_compare_failures != second_write_compare_failures:
-                message = "Write_compare: two revisions have different failures. " \
-                          "This might be a cli tool issue."
+                message = "Write_compare: two revisions have different failures."
                 write_errors_to_report(write_compare_report, first_impl, first_write_compare, second_impl,
                                        second_write_compare, TestReport.COMPARISON_FAILURES_FIELD, message,
                                        cur_result, final_result, test_file, TestReport.WRITE_COMPARE)
+                return_val = return_err
                 continue
             # get two disagree lists
             first_disagree_list_for_write = find_disagree_lists_for_write(first_write_compare_failures, first_impl)
@@ -1095,16 +1103,18 @@ def analyze_results(first_implementation, second_implementation, results_file, o
                                                                        second_disagree_list_for_write)
                 write_compare_report = {
                     TestFile.ERROR_MESSAGE_FIELD: "Write_compare: write behavior changed. "
-                                                  "Description below following the format: 'impl,type,file' where impl "
-                                                  "is the implementation used for writing files,"
-                                                  "type is either 'text' or 'binary' and "
-                                                  "file is the file that be re-writen",
+                                                  "Each field within disagree list represents the implementation that "
+                                                  "is re-writing other implementations. Description below following "
+                                                  "the format: 'impl,type,file' where impl is the implementation used "
+                                                  "for writing files, type is either 'text' or 'binary' and "
+                                                  "file is the file that is re-written",
                     disagree_lists: {first_impl: first_disagree_list_for_write,
                                      second_impl: second_disagree_list_for_write},
                     no_longer_agrees_with: no_more_agree_lists,
                     now_agrees_with: start_agree_lists,
                 }
                 write_to_report(cur_result, final_result, write_compare_report, test_file, TestReport.WRITE_COMPARE)
+                return_val = return_err
                 continue
 
     if '.' in output_root:
@@ -1112,6 +1122,7 @@ def analyze_results(first_implementation, second_implementation, results_file, o
     else:
         output_root = output_root + '.ion'
     simpleion.dump(final_result, FileIO(output_root, mode='wb'), binary=False, indent=' ')
+    sys.exit(return_val)
 
 
 def ion_test_driver(arguments):
@@ -1128,7 +1139,7 @@ def ion_test_driver(arguments):
         first_implementation = arguments['<first_description>']
         second_implementation = arguments['<second_description>']
         results_file = os.path.abspath(arguments['<results_file>'])
-        analyze_results(first_implementation, second_implementation, results_file, output_root)
+        return analyze_results(first_implementation, second_implementation, results_file, output_root)
     else:
         output_root = os.path.abspath(arguments['--output-dir'])
         if not os.path.exists(output_root):
