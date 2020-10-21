@@ -6,20 +6,14 @@ $ion_1_0
    read_error: {
     'ion-java_1': ErrorReport::[
      {
-      message: "test."
+      error_type: READ,
+      message: "test message.",
+      location: "test"
      }
     ],
-    'ion-java_2': ErrorReport::[
-     {
-      message: "test2."
-     }
+    'ion-java_2': [
     ]
    }
-  }
- },
- test2: {
-  result: {
-   message: "Result: two revisions have different results."
   }
  }
 }

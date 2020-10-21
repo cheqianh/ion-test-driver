@@ -7,18 +7,11 @@ $ion_1_0
     'ion-java_1': ErrorReport::[
      {
       error_type: WRITE,
-      message: "test message."
-     },
-     {
-      error_type: WRITE,
-      message: "test message 2."
+      message: "test message.",
+      location: "test"
      }
     ],
-    'ion-java_2': ErrorReport::[
-     {
-      error_type: WRITE,
-      message: "test message."
-     }
+    'ion-java_2': [
     ]
    }
   }

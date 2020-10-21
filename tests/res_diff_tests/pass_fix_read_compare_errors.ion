@@ -7,12 +7,22 @@
                 errors: ErrorReport::[
                     {
                       message: "test",
+                    },
+                    {
+                      message: "test 2",
                     }
                 ]
              }
         },
         'ion-java_2': {
-            result:FAIL
+            result:FAIL,
+            read_compare: {
+                errors: ErrorReport::[
+                    {
+                      message: "test",
+                    }
+                ]
+             }
         }
 	},
  },

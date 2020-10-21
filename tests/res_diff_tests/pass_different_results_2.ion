@@ -4,26 +4,16 @@
     "test": {
         'ion-java_1': {
             result: FAIL,
-             write_compare: {
+            read_compare: {
                 errors: ErrorReport::[
                     {
                       message: "test",
-                    },
-                    {
-                      message: "test 2",
                     }
                 ]
              }
         },
         'ion-java_2': {
-            result:FAIL,
-            write_compare: {
-                errors: ErrorReport::[
-                    {
-                      message: "test",
-                    }
-                ]
-             }
+            result: PASS
         }
 	},
  },

@@ -60,6 +60,8 @@ Options:
                                         name,location,revision. Name is the implementation's name and revision is
                                         optional, may be either a branch name or commit hash. Analyze an existing
                                         results file to identify any differences between the two implementations.
+                                        The order of two implementations matters and the analysis result is based on the
+                                        first implementation.
 
     -t, --test <type>                   Perform a particular test type or types, chosen from `good`, `bad`, `equivs`,
                                         `non-equivs`, and `all`. [default: all]
@@ -764,14 +766,28 @@ def write_to_report(cur_result, final_result, check_report, file, field):
     final_result[file] = cur_result
 
 
-def get_name(location):
+def validate_read_location(location, test_file):
+    location_array = location.split("/")
+    if location_array[-2] != 'data' or location_array[-3] != 'read' or location_array[-6] != 'results':
+        raise ValueError("Invalid location path in file: " + test_file)
+
+
+def validate_write_location(location, test_file):
+    location_array = location.split("/")
+    if location_array[-2] != 'data' or (location_array[-3] != 'binary' and location_array[-3] != 'text') or location_array[-5] != 'write' or location_array[-8] != 'results':
+        raise ValueError("Invalid location path in file: " + test_file)
+
+
+def get_name(location, test_file):
+    validate_read_location(location, test_file)
     name = location.split("/")[-1]
     if '.' in name:
         name = name[0:name.rfind('.')]
     return name
 
 
-def get_name_for_write(location):
+def get_name_for_write(location, test_file):
+    validate_write_location(location, test_file)
     location_array = location.split("/")
     # implementation's name
     impl = location_array[-4]
@@ -786,11 +802,11 @@ def get_name_for_write(location):
     return impl, t, file
 
 
-def find_disagree_list(failures_list, impl):
+def find_disagree_list(failures_list, impl, test_file):
     disagree_list = []
     for report in failures_list:
-        cur_first_impl = get_name(report['lhs']['location'])
-        cur_second_impl = get_name(report['rhs']['location'])
+        cur_first_impl = get_name(report['lhs']['location'], test_file)
+        cur_second_impl = get_name(report['rhs']['location'], test_file)
         if impl == cur_first_impl and cur_second_impl not in disagree_list:
             disagree_list.append(cur_second_impl)
         if impl == cur_second_impl and cur_first_impl not in disagree_list:
@@ -798,68 +814,65 @@ def find_disagree_list(failures_list, impl):
     return disagree_list
 
 
-def find_disagree_lists_for_write(failures_list, impl):
+def get_description_for_write(report, test_file, is_first):
+    l = 'lhs' if is_first else 'rhs'
+    cur_impl, cur_t, cur_file = get_name_for_write(report[l]['location'], test_file)
+    if cur_t != "text" and cur_t != "binary":
+        first_name = cur_file
+    else:
+        first_name = cur_impl + ',' + cur_t + ',' + cur_file
+    return first_name
+
+
+def append_description_for_write(impl, append_to_name, name, disagree_lists):
+    if impl == append_to_name.split(',')[0]:
+        if append_to_name not in disagree_lists:
+            disagree_lists[append_to_name] = []
+        if name not in disagree_lists[append_to_name]:
+            disagree_lists[append_to_name].append(name)
+
+
+def find_disagree_lists_for_write(failures_list, impl, test_file):
     disagree_lists = {}
     for report in failures_list:
-        cur_first_impl, cur_first_t, cur_first_file = get_name_for_write(report['lhs']['location'])
-        if cur_first_t != "text" and cur_first_t != "binary":
-            first_name = cur_first_file
-        else:
-            first_name = cur_first_impl + ',' + cur_first_t + ',' + cur_first_file
-        cur_second_impl, cur_second_t, cur_second_file = get_name_for_write(report['rhs']['location'])
-        if cur_second_t != "text" and cur_second_t != "binary":
-            second_name = cur_second_file
-        else:
-            second_name = cur_second_impl + ',' + cur_second_t + ',' + cur_second_file
-
-        if impl == cur_first_impl:
-            if first_name not in disagree_lists:
-                disagree_lists[first_name] = []
-            if second_name not in disagree_lists[first_name]:
-                disagree_lists[first_name].append(second_name)
-        if impl == cur_second_impl:
-            if second_name not in disagree_lists:
-                disagree_lists[second_name] = []
-            if first_name not in disagree_lists[second_name]:
-                disagree_lists[second_name].append(first_name)
+        first_name = get_description_for_write(report, test_file, True)
+        second_name = get_description_for_write(report, test_file, False)
+        append_description_for_write(impl, first_name, second_name, disagree_lists)
+        append_description_for_write(impl, second_name, first_name, disagree_lists)
     return disagree_lists
+
+
+def append_list(first_list, second_list, match_impl, append_to_list):
+    for impl in first_list:
+        if impl not in second_list and impl != match_impl:
+            append_to_list.append(impl)
 
 
 def analyze_list(first_list, second_list, first_impl, second_impl):
     no_more_agree_list = []
     start_agree_list = []
-    for impl in first_list:
-        if impl not in second_list and impl != second_impl:
-            no_more_agree_list.append(impl)
-    for impl in second_list:
-        if impl not in first_list and impl != first_impl:
-            start_agree_list.append(impl)
+    append_list(first_list, second_list, second_impl, start_agree_list)
+    append_list(second_list, first_list, first_impl, no_more_agree_list)
     return no_more_agree_list, start_agree_list
+
+
+def append_lists(first_lists, second_lists, append_to_lists):
+    for k in first_lists.keys():
+        if k not in second_lists.keys():
+            append_to_lists[k] = first_lists[k]
+        else:
+            for impl in first_lists[k]:
+                if impl not in second_lists[k]:
+                    if k not in append_to_lists.keys():
+                        append_to_lists[k] = []
+                    append_to_lists[k].append(impl)
 
 
 def analyze_lists(first_lists, second_lists):
     no_more_agree_lists = {}
     start_agree_lists = {}
-    for k in first_lists.keys():
-        if k not in second_lists.keys():
-            start_agree_lists[k] = first_lists[k]
-        else:
-            for impl in first_lists[k]:
-                if impl not in second_lists[k]:
-                    if k not in start_agree_lists.keys():
-                        start_agree_lists[k] = []
-                    start_agree_lists[k].append(impl)
-
-    for k in second_lists.keys():
-        if k not in first_lists.keys():
-            no_more_agree_lists[k] = second_lists[k]
-        else:
-            for impl in second_lists[k]:
-                if impl not in first_lists[k]:
-                    if k not in no_more_agree_lists.keys():
-                        no_more_agree_lists[k] = []
-                    no_more_agree_lists[k].append(impl)
-
+    append_lists(first_lists, second_lists, start_agree_lists)
+    append_lists(second_lists, first_lists, no_more_agree_lists)
     return no_more_agree_lists, start_agree_lists
 
 
@@ -889,11 +902,9 @@ def parse_des_for_res_diff(description):
         temp_dir = os.path.join(dir_name, 'temp')
         if os.path.exists(temp_dir):
             shutil.rmtree(temp_dir)
-        _, stderr = Popen((TOOL_DEPENDENCIES['git'], 'clone', '--recursive', des_list[1], temp_dir),
-                          stderr=PIPE, shell=COMMAND_SHELL).communicate()
+        check_call((TOOL_DEPENDENCIES['git'], 'clone', '--recursive', des_list[1], temp_dir), shell=COMMAND_SHELL)
         os.chdir(temp_dir)
-        _, stderr = Popen((TOOL_DEPENDENCIES['git'], 'checkout', des_list[2]),
-                          stderr=PIPE, shell=COMMAND_SHELL).communicate()
+        check_call((TOOL_DEPENDENCIES['git'], 'checkout', des_list[2]), shell=COMMAND_SHELL)
         commit = check_output((TOOL_DEPENDENCIES['git'], 'rev-parse', '--short', 'HEAD')).strip()
         shutil.rmtree(temp_dir)
         name = des_list[0] + '_' + commit.decode()
@@ -907,6 +918,15 @@ def write_errors_to_report(report, first_field, first_report, second_field, seco
     write_errors(report, first_field, first_report, second_field,
                  second_report, error_field, msg)
     write_to_report(cur_result, final_result, report, test_file, report_field)
+
+
+def validate_results(report, result_field, read_error, read_compare, write_error, write_compare, impl, test_file):
+    if result_field not in report.keys():
+        raise ValueError("Invalid result: missing result for '" + impl + "' in '" + test_file + "'.")
+    if ion_equals(report[result_field], TestReport.PASS):
+        if read_error in report.keys() or read_compare in report.keys() or write_error in report.keys() \
+                or write_compare in report.keys():
+            raise ValueError("Invalid report: result passes with error(s) for '" + impl + "' in '" + test_file + "'.")
 
 
 def analyze_results(first_implementation, second_implementation, results_file, output_root):
@@ -946,18 +966,12 @@ def analyze_results(first_implementation, second_implementation, results_file, o
 
             # Step one analyze result field
             result_report = {}
-            if result_field not in first_report.keys():
-                raise ValueError("Invalid result: missing result for '" + first_impl + "' in '" + test_file + "'.")
-            if result_field not in second_report.keys():
-                raise ValueError("Invalid result: missing result for '" + second_impl + "' in '" + test_file + "'.")
-            if not ion_equals(first_report[result_field], second_report[result_field]):
-                result_report = {TestFile.ERROR_MESSAGE_FIELD: "Result: two revisions have different results."}
-            elif ion_equals(first_report[result_field], TestReport.PASS) and \
+            validate_results(first_report, result_field, TestReport.READ_ERROR, TestReport.READ_COMPARE,
+                             TestReport.WRITE_ERROR, TestReport.WRITE_COMPARE, first_impl, test_file)
+            validate_results(second_report, result_field, TestReport.READ_ERROR, TestReport.READ_COMPARE,
+                             TestReport.WRITE_ERROR, TestReport.WRITE_COMPARE, second_impl, test_file)
+            if ion_equals(first_report[result_field], TestReport.PASS) and \
                     ion_equals(second_report[result_field], TestReport.PASS):
-                continue
-            if any(result_report):
-                write_to_report(cur_result, final_result, result_report, test_file, result_field)
-                return_val = return_err
                 continue
 
             # Step two analyze read_error field
@@ -1015,8 +1029,8 @@ def analyze_results(first_implementation, second_implementation, results_file, o
                 return_val = return_err
                 continue
             # get two disagree lists
-            first_disagree_list = find_disagree_list(first_read_compare_failures, first_impl)
-            second_disagree_list = find_disagree_list(first_read_compare_failures, second_impl)
+            first_disagree_list = find_disagree_list(first_read_compare_failures, first_impl, test_file)
+            second_disagree_list = find_disagree_list(first_read_compare_failures, second_impl, test_file)
             # analyze disagree list
             if second_impl not in first_disagree_list and first_impl not in second_disagree_list:
                 if first_disagree_list != second_disagree_list:
@@ -1096,8 +1110,8 @@ def analyze_results(first_implementation, second_implementation, results_file, o
                 return_val = return_err
                 continue
             # get two disagree lists
-            first_disagree_list_for_write = find_disagree_lists_for_write(first_write_compare_failures, first_impl)
-            second_disagree_list_for_write = find_disagree_lists_for_write(second_write_compare_failures, second_impl)
+            first_disagree_list_for_write = find_disagree_lists_for_write(first_write_compare_failures, first_impl, test_file)
+            second_disagree_list_for_write = find_disagree_lists_for_write(second_write_compare_failures, second_impl, test_file)
             if not are_lists_agree(first_disagree_list_for_write, second_disagree_list_for_write):
                 no_more_agree_lists, start_agree_lists = analyze_lists(first_disagree_list_for_write,
                                                                        second_disagree_list_for_write)

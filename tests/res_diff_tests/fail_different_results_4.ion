@@ -3,20 +3,10 @@
  good: {
     "test": {
         'ion-java_1': {
-            result: FAIL,
-             write_compare: {
-                errors: ErrorReport::[
-                    {
-                      message: "test",
-                    },
-                    {
-                      message: "test 2",
-                    }
-                ]
-             }
+            result: PASS,
         },
         'ion-java_2': {
-            result:FAIL,
+            result: FAIL,
             write_compare: {
                 errors: ErrorReport::[
                     {

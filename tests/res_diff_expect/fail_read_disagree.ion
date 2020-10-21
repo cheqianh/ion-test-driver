@@ -14,10 +14,10 @@ $ion_1_0
     ]
    },
    no_longer_agrees_with: [
-    "ion-c_1"
+    "ion-js_1"
    ],
    now_agrees_with: [
-    "ion-js_1"
+    "ion-c_1"
    ]
   }
  }

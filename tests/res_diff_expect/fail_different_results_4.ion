@@ -5,14 +5,6 @@ $ion_1_0
    message: "Write_compare: new commit has different write compare error(s)",
    write_compare: {
     'ion-java_1': {
-     errors: ErrorReport::[
-      {
-       message: "test"
-      },
-      {
-       message: "test 2"
-      }
-     ]
     },
     'ion-java_2': {
      errors: ErrorReport::[
