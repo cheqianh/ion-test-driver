@@ -9,16 +9,6 @@
                         result: "NOT_EQUAL",
                         message: "two event streams have different size",
                         lhs: {
-                            location: "ion-test-driver/amazon/iontest/results/bad/test.ion/read/data/ion-java_2.ion",
-                         },
-                        rhs: {
-                            location: "ion-test-driver/amazon/iontest/results/bad/test.ion/read/data/ion-c_1.ion",
-                        }
-                    },
-                    {
-                        result: "NOT_EQUAL",
-                        message: "two event streams have different size",
-                        lhs: {
                             location: "ion-test-driver/amazon/iontest/results/bad/test.ion/read/data/ion-java_1.ion",
                          },
                         rhs: {
@@ -30,6 +20,16 @@
                         message: "two event streams have different size",
                         lhs: {
                             location: "ion-test-driver/amazon/iontest/results/bad/test.ion/read/data/ion-java_2.ion",
+                         },
+                        rhs: {
+                            location: "ion-test-driver/amazon/iontest/results/bad/test.ion/read/data/ion-c_1.ion",
+                        }
+                    },
+                    {
+                        result: "NOT_EQUAL",
+                        message: "two event streams have different size",
+                        lhs: {
+                            location: "ion-test-driver/amazon/iontest/results/bad/test.ion/read/data/ion-java_1.ion",
                          },
                         rhs: {
                             location: "ion-test-driver/amazon/iontest/results/bad/test.ion/read/data/ion-js_1.ion",
@@ -46,16 +46,6 @@
                         result: "NOT_EQUAL",
                         message: "two event streams have different size",
                         lhs: {
-                            location: "ion-test-driver/amazon/iontest/results/bad/test.ion/read/data/ion-java_2.ion",
-                         },
-                        rhs: {
-                            location: "ion-test-driver/amazon/iontest/results/bad/test.ion/read/data/ion-c_1.ion",
-                        }
-                    },
-                    {
-                        result: "NOT_EQUAL",
-                        message: "two event streams have different size",
-                        lhs: {
                             location: "ion-test-driver/amazon/iontest/results/bad/test.ion/read/data/ion-java_1.ion",
                          },
                         rhs: {
@@ -67,6 +57,16 @@
                         message: "two event streams have different size",
                         lhs: {
                             location: "ion-test-driver/amazon/iontest/results/bad/test.ion/read/data/ion-java_2.ion",
+                         },
+                        rhs: {
+                            location: "ion-test-driver/amazon/iontest/results/bad/test.ion/read/data/ion-c_1.ion",
+                        }
+                    },
+                    {
+                        result: "NOT_EQUAL",
+                        message: "two event streams have different size",
+                        lhs: {
+                            location: "ion-test-driver/amazon/iontest/results/bad/test.ion/read/data/ion-java_1.ion",
                          },
                         rhs: {
                             location: "ion-test-driver/amazon/iontest/results/bad/test.ion/read/data/ion-js_1.ion",

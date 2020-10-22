@@ -1044,6 +1044,9 @@ def analyze_results(first_implementation, second_implementation, results_file, o
                     write_errors_to_report(read_compare_report, first_impl, first_disagree_list, second_impl,
                                            second_disagree_list, disagree_lists, message,
                                            cur_result, final_result, test_file, TestReport.READ_COMPARE)
+                no_more_agree_list, start_agree_list = analyze_list(first_disagree_list, second_disagree_list,
+                                                                    first_impl, second_impl)
+                if any(no_more_agree_list):
                     return_val = return_err
                     continue
             elif second_impl in first_disagree_list and first_impl in second_disagree_list:
