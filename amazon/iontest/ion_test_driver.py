@@ -88,6 +88,7 @@ from amazon.iontest.ion_test_driver_util import COMMAND_SHELL, log_call
 
 ION_SUFFIX_TEXT = '.ion'
 ION_SUFFIX_BINARY = '.10n'
+ION_TEST_DRIVER_PATH = os.path.abspath(__file__)
 
 
 def check_tool_dependencies(args):
@@ -768,14 +769,16 @@ def write_to_report(cur_result, final_result, check_report, file, field):
 
 def validate_read_location(location, test_file):
     location_array = location.split("/")
-    if location_array[-2] != 'data' or location_array[-3] != 'read' or location_array[-6] != 'results':
-        raise ValueError("Invalid location path in file: " + test_file)
+    if location_array[-1] != test_file:
+        if location_array[-2] != 'data' or location_array[-3] != 'read' or location_array[-6] != 'results':
+            raise ValueError("Invalid location path in file: " + test_file)
 
 
 def validate_write_location(location, test_file):
     location_array = location.split("/")
-    if location_array[-2] != 'data' or (location_array[-3] != 'binary' and location_array[-3] != 'text') or location_array[-5] != 'write' or location_array[-8] != 'results':
-        raise ValueError("Invalid location path in file: " + test_file)
+    if location_array[-1] != test_file:
+        if location_array[-2] != 'data' or (location_array[-3] != 'binary' and location_array[-3] != 'text') or location_array[-5] != 'write' or location_array[-8] != 'results':
+            raise ValueError("Invalid location path in file: " + test_file)
 
 
 def get_name(location, test_file):
@@ -898,16 +901,18 @@ def parse_des_for_res_diff(description):
     if len(des_list) == 2:
         name = des_list[0] + '_' + des_list[1]
     elif len(des_list) == 3:
-        dir_name, f = os.path.split(os.path.abspath(__file__))
+        dir_name, f = os.path.split(ION_TEST_DRIVER_PATH)
         temp_dir = os.path.join(dir_name, 'temp')
         if os.path.exists(temp_dir):
             shutil.rmtree(temp_dir)
         check_call((TOOL_DEPENDENCIES['git'], 'clone', '--recursive', des_list[1], temp_dir), shell=COMMAND_SHELL)
         os.chdir(temp_dir)
+        check_call((TOOL_DEPENDENCIES['git'], 'config', '--global', 'advice.detachedHead', 'false'), shell=COMMAND_SHELL)
         check_call((TOOL_DEPENDENCIES['git'], 'checkout', des_list[2]), shell=COMMAND_SHELL)
         commit = check_output((TOOL_DEPENDENCIES['git'], 'rev-parse', '--short', 'HEAD')).strip()
-        shutil.rmtree(temp_dir)
         name = des_list[0] + '_' + commit.decode()
+        os.chdir(dir_name)
+        shutil.rmtree(temp_dir)
     else:
         raise ValueError("Invalid implementation description.")
     return name
@@ -1136,6 +1141,7 @@ def analyze_results(first_implementation, second_implementation, results_file, o
     else:
         output_root = output_root + '.ion'
     simpleion.dump(final_result, FileIO(output_root, mode='wb'), binary=False, indent=' ')
+    print('Analysis complete with statues \'%d\'. Results written to %s.' % (return_val, output_root))
     sys.exit(return_val)
 
 
