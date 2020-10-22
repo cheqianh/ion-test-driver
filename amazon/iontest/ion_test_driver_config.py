@@ -41,7 +41,7 @@ TOOL_TEST_COMMAND = {
     'maven': '--help',
     'npm': '-v',
     'node': '-v',
-    'java': '--help'
+    'java': '-help'
 }
 
 
