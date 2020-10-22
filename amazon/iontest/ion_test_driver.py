@@ -1138,7 +1138,7 @@ def analyze_results(first_implementation, second_implementation, results_file, o
     else:
         output_root = output_root + '.ion'
     simpleion.dump(final_result, FileIO(output_root, mode='wb'), binary=False, indent=' ')
-    print('Analysis complete with statues \'%d\'. Results written to %s.' % (return_val, output_root))
+    print('Analysis complete with status \'%d\'. Results written to %s.' % (return_val, output_root))
     sys.exit(return_val)
 
 
