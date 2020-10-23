@@ -75,6 +75,6 @@ ION_BUILDS = {
 ION_IMPLEMENTATIONS = [
     'ion-c,https://github.com/amzn/ion-c.git,master',
     'ion-java,https://github.com/amzn/ion-java.git,master',
-    'ion-js,https://github.com/amzn/ion-js.git,master'
+    # 'ion-js,https://github.com/amzn/ion-js.git,master'
     # TODO add more Ion implementations here
 ]
