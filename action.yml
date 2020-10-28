@@ -6,8 +6,19 @@ runs:
     - run: echo "hello world"
       shell: bash
 
+    - run:
+        ion-test-driver:
+          runs-on: macos-10.15
+          outputs:
+            report: ${{ steps.step1.outputs.test }}
+          steps:
+            - name: Checkout ion-java
+              uses: actions/checkout@master
+              with:
+                repository: amzn/ion-java
+                ref: master
+                path: ion-java
 
-#on: [pull_request]
 
 #jobs:
 #  ion-test-driver:
