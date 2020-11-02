@@ -923,8 +923,8 @@ To compare two revisions of each test file:
 Otherwise proceed to the next step.
 2. Check `read_error` field. If both of them have the same read_error or don't have any errors, proceed to the next step. 
 Otherwise, write `read performance changed` error to the final report and then move on to the next step.
-3. Check `read_compare` field. Analyze the given read_compare report and find all the disagree revision pairs. 
-After extracting the two disagree lists, compare the master branch and new commit using these two cases:
+3. Check `read_compare` field. Analyze the given read_compare report and find all the disagree revision pairs. After 
+extracting the two disagree lists, compare the master branch and new commit using these two cases:
 **3.1.** If they agree with each other, their disagree lists should be the same. Raise a `cli compare diff` error if they 
 are not the same.
 **3.2.** If they disagree with each other, write down what implementations that the master commit no longer 
