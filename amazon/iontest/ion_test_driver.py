@@ -253,6 +253,9 @@ class CompareResult(TestResult):
                 comparisons_in = FileIO(self.output_location, mode='rb')
                 try:
                     comparison_failure_stream = simpleion.load(comparisons_in, single_value=False)
+                except SystemError:
+                    comparison_failure_stream = simpleion.load(comparisons_in, single_value=False,
+                                                               force_python_impl=True)
                 finally:
                     comparisons_in.close()
                 self.__comparison_report = IonPyList.from_value(IonType.LIST, comparison_failure_stream)
